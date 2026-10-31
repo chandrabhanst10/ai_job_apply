@@ -1,0 +1,8 @@
+{
+  "noticePeriod": "90 days",
+  "expectedSalary": "INR 75,000/month",
+  "currentSalary": "INR 75,000/month",
+  "preferredCities": ["Pune", "Mumbai", "Noida", "Gurugram", "Indore"],
+  "hybridOk": true,
+  "holdingOffer": false
+}

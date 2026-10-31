@@ -1,0 +1,53 @@
+name: apply
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # 08:30 IST
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Fill forms but do not submit"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jobpilot
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASS: ${{ secrets.SMTP_PASS }}
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: "587"
+      TZ: Asia/Kolkata
+      DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+      - run: npm run apply
+      - name: Commit applied.json + jobs.txt
+        run: |
+          git config user.name "jobpilot-bot"
+          git config user.email "jobpilot-bot@users.noreply.github.com"
+          git add applied.json jobs.txt
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: update applied/jobs"
+          git pull --rebase
+          git push
